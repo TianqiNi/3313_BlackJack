@@ -25,6 +25,9 @@ const calculateTotal = (hand) => {
 
 function App() {
   const [messages, setMessages] = useState([]);
+	const [gamePrompt, setGamePrompt] = useState('');
+	const [winMessage, setWinMessage] = useState('');
+
 	
 	const [playerHand, setPlayerHand] = useState([]);
   const [dealerHand, setDealerHand] = useState([]);
@@ -33,8 +36,7 @@ function App() {
   const [expectedInputType, setExpectedInputType] = useState(null);
   const socketRef = useRef(null);
   const [connected, setConnected] = useState(false);
-
-	
+	const [revealDealerHand, setRevealDealerHand] = useState(false);
 
   const appendMessage = (text) => {
     setMessages((prev) => [...prev, text]);
@@ -109,6 +111,9 @@ function App() {
 	const handleButtonInput = (choice) => {
 		const lowercase = choice.toLowerCase();
 		if (expectedInputType === "continue") {
+			setRevealDealerHand(false);
+			setWinMessage('');
+
 			socketRef.current?.send("ack");
 			setTimeout(() => {
 				socketRef.current?.send(lowercase);
@@ -138,13 +143,27 @@ const startGame = () => {
     appendMessage(message);
 		parseHands(message);
 
+		// Reveal dealer hand if the round is over (a winner is announced)
+		if (
+			message.toLowerCase().includes("dealer wins") ||
+			message.toLowerCase().includes("player wins")
+		) {
+			setRevealDealerHand(true);
+			setWinMessage(message);
+		}
+
     if (message === "READY?") {
-      ws.send("yes");
-      appendMessage("[Auto] Sent: yes");
+			setRevealDealerHand(false);
+			setGamePrompt('');
+			setWinMessage('');
+			ws.send("yes");
+			appendMessage("[Auto] Sent: yes");
     } else if (message.toLowerCase().includes("do you want to hit or stand")) {
+			setGamePrompt("Do you want to hit or stand?");
       setExpectedInputType("hitOrStand");
       setIsInputEnabled(true);
     } else if (message.toLowerCase().includes("do you want to continue playing")) {
+			setGamePrompt("Do you want to continue playing?");
       setExpectedInputType("continue");
       setIsInputEnabled(true);
     } else if (message.toLowerCase().includes("which room do you want to join")) {
@@ -153,7 +172,8 @@ const startGame = () => {
     } else if (message.toLowerCase().includes("invalid input")) {
       // don't ack, prompt for retry
     } else if (message === "Bye") {
-      appendMessage("[Game ended]");
+			appendMessage("[Game ended]");
+			setGamePrompt('');
       ws.send("ack");
       ws.close();
     } else {
@@ -175,7 +195,19 @@ const startGame = () => {
 
   return (
 		<div className="app-container">
-			<h1>🃏 Blackjack Game Interface</h1>
+			<h1>BLACKJACK</h1>
+
+			{winMessage && (
+				<div className="win-message">
+					{winMessage}
+				</div>
+			)}
+
+			{gamePrompt && (
+				<div className="game-prompt">
+					{gamePrompt}
+				</div>
+			)}
 
 			{!connected && (
 				<button onClick={startGame} className="start-button">
@@ -185,11 +217,28 @@ const startGame = () => {
 
 			<div className="hand-container">
 				<div>
-					<h2>Dealer's Hand (Total: {calculateTotal(dealerHand)})</h2>
+				<h2>
+					Dealer's Hand 
+					(Total: {revealDealerHand 
+						? calculateTotal(dealerHand) 
+						: dealerHand.length > 0 
+							? calculateTotal([dealerHand[0]]) 
+							: 0})
+				</h2>
 					<div className="cards-row">
-						{dealerHand.map((value, idx) => (
-							<Card key={`dealer-${idx}`} value={value} suit={suits[idx % 4]} cardId={`dealer-${idx}`} />
-						))}
+						{dealerHand.map((value, idx) => {
+							// Reveal only the first card if not revealDealerHand
+							const showCard = revealDealerHand || idx === 0;
+							return (
+								<Card
+									key={`dealer-${idx}`}
+									value={showCard ? value : null}
+									suit={showCard ? suits[idx % 4] : null}
+									cardId={`dealer-${idx}`}
+									hidden={!showCard}
+								/>
+							);
+						})}
 					</div>
 				</div>
 
