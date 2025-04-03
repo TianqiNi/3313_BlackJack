@@ -109,34 +109,49 @@ public:
 
     void askHit()
     {
+        std::cout << "[DEBUG] Sending2 hit/stand prompt..." << std::endl;
         socketWrite.Wait();
+        std::cout << "[DEBUG] Sending1 hit/stand prompt..." << std::endl;
+
         ByteArray data("Do you want to hit or stand?\n");
         socket.Write(data);
 
-        ByteArray receivedData;
-        socket.Read(receivedData);
-        std::string ack(receivedData.v.begin(), receivedData.v.end());
-        if (ack == "ack")
-        {
-            socketWrite.Signal();
-        }
+        // ByteArray receivedData;
+        // socket.Read(receivedData);
+        // std::string ack(receivedData.v.begin(), receivedData.v.end());
+        // ack.erase(std::remove(ack.begin(), ack.end(), '\n'), ack.end());
+        // ack.erase(std::remove(ack.begin(), ack.end(), '\r'), ack.end());
+        
+        // std::cout << "[DEBUG] Got ACK: [" << ack << "]\n";
+
+        // if (ack == "ack") {
+        //     socketWrite.Signal(); 
+        // }
 
         // Wait for response
         while (true)
         {
             // Wait for response
-
+            ByteArray receivedData;
+            std::cout << "[DEBUG] Waiting for hit/stand..." << std::endl;
             socket.Read(receivedData);
             std::string received(receivedData.v.begin(), receivedData.v.end());
+
+            received.erase(std::remove(received.begin(), received.end(), '\n'), received.end());
+            received.erase(std::remove(received.begin(), received.end(), '\r'), received.end());
+
+            std::cout << "[DEBUG] Got response: [" << received << "]" << std::endl;
 
             if (received == "hit")
             {
                 hitFlag = true;
+                socketWrite.Signal();
                 break;
             }
             else if (received == "stand")
             {
                 hitFlag = false;
+                socketWrite.Signal();
                 break;
             }
             else
@@ -146,6 +161,8 @@ public:
                 socket.Write(error);
                 socket.Read(receivedData);
                 std::string ack(receivedData.v.begin(), receivedData.v.end());
+                ack.erase(std::remove(ack.begin(), ack.end(), '\n'), ack.end());
+                ack.erase(std::remove(ack.begin(), ack.end(), '\r'), ack.end());
                 if (ack == "ack")
                 {
                     socketWrite.Signal();
@@ -162,12 +179,12 @@ public:
 
     void readHand(int dealer[], int player[], int dealerHandSize, int playerHandSize)
     {
-
         // playerHand will have the playerHand on shared memory
         std::copy_n(dealer, dealerHandSize, dealerHand.begin());
         std::copy_n(player, playerHandSize, playerHand.begin());
 
         std::string handStr;
+        std::cout << "[DEBUG] Sending hand data:\n" << handStr << std::endl;
         handStr += "Dealer's hand:\n";
         for (int i = 0; i < dealerHandSize; ++i)
         {
@@ -187,39 +204,54 @@ public:
 
         ByteArray receivedData;
         socket.Read(receivedData);
+        
         std::string ack(receivedData.v.begin(), receivedData.v.end());
-        if (ack == "ack")
-        {
+        ack.erase(std::remove(ack.begin(), ack.end(), '\n'), ack.end());
+        ack.erase(std::remove(ack.begin(), ack.end(), '\r'), ack.end());
+
+        std::cout << "[DEBUG] readHand ACK: [" << ack << "]\n";
+        if (ack == "ack") {
             socketWrite.Signal();
         }
     }
 
     void askContinue()
     {
-        socketWrite.Wait();
         ByteArray data("Do you want to continue playing? (yes or no)");
-        // message type = 1 hit
         socket.Write(data);
+
         ByteArray receivedData;
-        socket.Read(receivedData);
-        std::string ack(receivedData.v.begin(), receivedData.v.end());
-        if (ack == "ack")
-        {
-            socketWrite.Signal();
+        socket.Read(receivedData);  // Read whatever comes back
+        std::string response(receivedData.v.begin(), receivedData.v.end());
+
+        // Split into parts
+        response.erase(std::remove(response.begin(), response.end(), '\n'), response.end());
+        response.erase(std::remove(response.begin(), response.end(), '\r'), response.end());
+
+        std::cout << "[DEBUG] Received raw continue response: [" << response << "]\n";
+
+        if (response == "ack") {
+            // wait for the next input
+            socket.Read(receivedData);
+            response = std::string(receivedData.v.begin(), receivedData.v.end());
+            response.erase(std::remove(response.begin(), response.end(), '\n'), response.end());
+            response.erase(std::remove(response.begin(), response.end(), '\r'), response.end());
         }
 
-        socket.Read(data);
-        std::string received(data.v.begin(), data.v.end());
+        std::cout << "[DEBUG] Final continue input: [" << response << "]\n";
 
-        if (received == "yes")
+        if (response == "yes")
         {
             isContinue = true;
+            socketWrite.Signal();  // ensure we unlock if needed
         }
-        else if (received == "no")
+        else if (response == "no")
         {
             isContinue = false;
+            socketWrite.Signal();  // ensure we unlock if needed
         }
     }
+
 
     void sendWinner(std::string message)
     {
@@ -228,7 +260,7 @@ public:
             playerHand[i] = 0;
             dealerHand[i] = 0;
         }
-        socketWrite.Wait();
+        // socketWrite.Wait();
         socket.Write(message);
         ByteArray receivedData;
         socket.Read(receivedData);
@@ -419,8 +451,11 @@ public:
         try
         {
             continueFlag = true;
+            bool roundOver = false;
+
             while (continueFlag == true)
             {
+                roundOver = false;
                 Shared<MyShared> sharedMemory("sharedMemory");
                 std::cout << "Starting a new game..." << std::endl;
                 // initialize two card to the shared memory
@@ -481,6 +516,7 @@ public:
                         if (gamePlayer->calculateHandTotal() > 21)
                         {
                             gamePlayer->setExplode(true);
+                            roundOver = true;
                             break;
                         };
                     }
@@ -490,38 +526,41 @@ public:
                     };
                 }
 
+                if (!roundOver){
                 // dealer begin hit the card
-                while (true)
-                {
-                    if ((!gamePlayer->getExplode() && gameDealer->calculateHandTotal() < 17))
+                    while (true)
                     {
-                        // if dealer satisfy the condition then add card to shared memory
-                        // shared->dealerHand1.push_back(deck[rand() % 4][rand() % 13]);
-                        Shared<MyShared> shared("sharedMemory");
-                        write->Wait();
-                        // shared->table[0].dealerHand[shared->table[0].dealerHandSize] = 3; // Add a card (e.g., '3')
-                        // shared->table[0].dealerHandSize++;                                // Increment the count
-                        dealCard(deck, shared->table[roomId].dealerHand, shared->table[roomId].dealerHandSize);
-                        read->Signal();
-
-                        read->Wait();
-                        gameDealer->deal(shared->table[roomId].dealerHand);
-
-                        // let spector get information
-                        if (spectators.size() != 0)
+                        if ((!gamePlayer->getExplode() && gameDealer->calculateHandTotal() < 17))
                         {
-                            for (auto *spectator : spectators)
+                            // if dealer satisfy the condition then add card to shared memory
+                            // shared->dealerHand1.push_back(deck[rand() % 4][rand() % 13]);
+                            Shared<MyShared> shared("sharedMemory");
+                            write->Wait();
+                            // shared->table[0].dealerHand[shared->table[0].dealerHandSize] = 3; // Add a card (e.g., '3')
+                            // shared->table[0].dealerHandSize++;                                // Increment the count
+                            dealCard(deck, shared->table[roomId].dealerHand, shared->table[roomId].dealerHandSize);
+                            read->Signal();
+
+                            read->Wait();
+                            gameDealer->deal(shared->table[roomId].dealerHand);
+
+                            // let spector get information
+                            if (spectators.size() != 0)
                             {
-                                spectator->send(shared->table[roomId].dealerHand, shared->table[roomId].playerHand, shared->table[roomId].dealerHandSize, shared->table[roomId].playerHandSize);
+                                for (auto *spectator : spectators)
+                                {
+                                    spectator->send(shared->table[roomId].dealerHand, shared->table[roomId].playerHand, shared->table[roomId].dealerHandSize, shared->table[roomId].playerHandSize);
+                                }
                             }
+                            // since the player has finished his round and act as a spectator
+                            gamePlayer->readHand(shared->table[roomId].dealerHand, shared->table[roomId].playerHand, shared->table[roomId].dealerHandSize, shared->table[roomId].playerHandSize);
+                            write->Signal();
                         }
-                        // since the player has finished his round and act as a spectator
-                        gamePlayer->readHand(shared->table[roomId].dealerHand, shared->table[roomId].playerHand, shared->table[roomId].dealerHandSize, shared->table[roomId].playerHandSize);
-                        write->Signal();
-                    }
-                    else
-                    {
-                        break;
+                        else
+                        {
+                            roundOver = true;
+                            break;
+                        }
                     }
                 }
                 // if player exploded
@@ -580,8 +619,6 @@ public:
                 gamePlayer->askContinue();
                 if (gamePlayer->getContinue())
                 {
-                    // nothing change
-                    // Write something to client
                     gamePlayer->sendWinner("You continue playing!\n");
                 }
                 else
@@ -603,15 +640,7 @@ public:
                         gamePlayer = nullptr;
                     }
                 }
-                if (gamePlayer == nullptr && spectators.size() == 0)
-                {
-                    // terminate the thread if there is no player and the list is empty
-                    continueFlag = false;
-                }
-                else
-                {
-                    continueFlag == true;
-                }
+                continueFlag = !(gamePlayer == nullptr && spectators.empty());
             }
             std::this_thread::sleep_for(std::chrono::seconds(2));
             std::cout << "Game room ending...\n";
@@ -659,6 +688,22 @@ int main()
                 {
                     Socket newConnection = server.Accept();
                     std::cout << "Accepted new connection.\n";
+
+                    // Ask the client if they're ready
+                    ByteArray initPrompt("READY?");
+                    newConnection.Write(initPrompt);
+
+                    ByteArray initResp;
+                    newConnection.Read(initResp);
+                    std::string initStr(initResp.v.begin(), initResp.v.end());
+                    initStr.erase(std::remove(initStr.begin(), initStr.end(), '\n'), initStr.end());
+                    initStr.erase(std::remove(initStr.begin(), initStr.end(), '\r'), initStr.end());
+
+                    if (initStr != "yes") {
+                        std::cout << "Client did not confirm with yes. Closing connection.\n";
+                        newConnection.Close();
+                        continue;
+                    }
 
                     if (activeRoomCount < 3)
                     {
