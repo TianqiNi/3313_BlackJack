@@ -1,5 +1,5 @@
-/* App.css - Casino Theme */
-body, html {
+body,
+html {
   margin: 0;
   padding: 0;
   height: 100%;
@@ -15,24 +15,40 @@ body, html {
 
 body {
   color: #fefefe;
-  font-family: 'Georgia', serif;
+  font-family: "Georgia", serif;
+}
+
+.screen-wrapper {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 100vh;
+  width: 100%;
 }
 
 .app-container {
   display: flex;
   flex-direction: column;
   align-items: center;
-  justify-content: center; /* Center vertically */
-  padding: 2rem;
+  justify-content: center;
+  padding: 4rem 2rem;
   max-width: 1000px;
   width: 100%;
   box-sizing: border-box;
+  min-height: 90vh;
+  border: 10px solid #a67c00;
+  border-radius: 24px;
+  background-color: #0f3e1d;
+  box-shadow: inset 0 0 30px #00000088;
 }
 
-h1 {
+.main-title {
   color: gold;
   text-shadow: 2px 2px 4px #000;
-  margin-bottom: 2rem;
+  margin-bottom: 1.5rem;
+  font-size: 3rem;
+  text-align: center;
 }
 
 h2 {
@@ -65,15 +81,17 @@ h2 {
 }
 
 .start-button {
-  padding: 1rem 2rem;
-  font-size: 1.25rem;
-  margin-bottom: 2rem;
+  padding: 1.25rem 3rem;
+  font-size: 1.5rem;
+  margin: 2rem 0;
+  letter-spacing: 0.05em;
 }
 
 .hand-container {
   display: flex;
+  flex-direction: column;
   justify-content: space-around;
-  gap: 2rem;
+  gap: 4rem;
   margin-bottom: 2rem;
 }
 
@@ -133,6 +151,36 @@ h2 {
   justify-content: center;
   gap: 2rem;
   margin-bottom: 2rem;
+}
+
+.end-screen {
+  text-align: center;
+  margin-top: 2rem;
+}
+
+.end-screen h2 {
+  color: gold;
+  font-size: 2rem;
+  text-shadow: 2px 2px 4px #000;
+  margin-bottom: 1rem;
+}
+
+.restart-button {
+  background-color: #d4af37;
+  color: #111;
+  border: none;
+  border-radius: 8px;
+  font-weight: bold;
+  font-size: 1rem;
+  padding: 1rem 2rem;
+  cursor: pointer;
+  transition: all 0.2s ease-in-out;
+  box-shadow: 0 4px #b2892b;
+}
+
+.restart-button:hover {
+  background-color: #f5d76e;
+  transform: translateY(-2px);
 }
 
 @media (max-width: 600px) {
