@@ -1,15 +1,52 @@
 import { useRef, useState } from 'react';
+import Card from './Card';
+
+const suits = ['♠', '♥', '♦', '♣'];
 
 function App() {
   const [messages, setMessages] = useState([]);
+	
+	const [playerHand, setPlayerHand] = useState([]);
+  const [dealerHand, setDealerHand] = useState([]);
   const [input, setInput] = useState('');
   const [isInputEnabled, setIsInputEnabled] = useState(false);
   const [expectedInputType, setExpectedInputType] = useState(null);
   const socketRef = useRef(null);
   const [connected, setConnected] = useState(false);
 
+	
+
   const appendMessage = (text) => {
     setMessages((prev) => [...prev, text]);
+  };
+
+	const parseHands = (message) => {
+    const dealer = [];
+    const player = [];
+    const lines = message.split('\n');
+    let current = null;
+
+    for (let line of lines) {
+			const lower = line.toLowerCase();
+      if (lower.includes("dealer's hand")) {
+        current = dealer;
+      } else if (lower.includes("player's hand")) {
+        current = player;
+			} else if (lower.includes("your total is")) {
+					continue;
+      } else {
+        const numbers = line.trim().split(/\s+/).map(Number).filter(n => !isNaN(n));
+        if (current && numbers.length > 0) {
+          current.push(...numbers);
+        }
+      }
+    }
+
+    // Only update hands if values were parsed
+    if (dealer.length > 0 || player.length > 0) {
+      setDealerHand(dealer);
+      setPlayerHand(player);
+    }
   };
 
   const handleSend = () => {
@@ -49,6 +86,23 @@ function App() {
     setExpectedInputType(null);
   };
 
+	const handleButtonInput = (choice) => {
+		const lowercase = choice.toLowerCase();
+		if (expectedInputType === "continue") {
+			socketRef.current?.send("ack");
+			setTimeout(() => {
+				socketRef.current?.send(lowercase);
+			}, 50);
+		} else {
+			socketRef.current?.send(lowercase);
+		}
+	
+		appendMessage(`> ${lowercase}`);
+		setInput('');
+		setIsInputEnabled(false);
+		setExpectedInputType(null);
+	};
+
   // Triggered by button click
 const startGame = () => {
   const ws = new WebSocket('ws://localhost:8080');
@@ -62,6 +116,7 @@ const startGame = () => {
     const message = event.data.trim();
     console.log("[Raw msg]:", JSON.stringify(message));
     appendMessage(message);
+		parseHands(message);
 
     if (message === "READY?") {
       ws.send("yes");
@@ -99,33 +154,74 @@ const startGame = () => {
   };
 
   return (
-    <div style={{ padding: '2rem', fontFamily: 'monospace' }}>
-      <h1>🃏 Blackjack Game Interface</h1>
-      {!connected && (
-        <button onClick={startGame} style={{ padding: '1rem', marginBottom: '1rem' }}>
-          Start Game
-        </button>
-      )}
-      <div style={{ whiteSpace: 'pre-wrap', background: '#f5f5f5', padding: '1rem', height: '300px', overflowY: 'auto', borderRadius: '8px', border: '1px solid #ccc' }}>
-        {messages.map((msg, idx) => (
-          <div key={idx}>{msg}</div>
-        ))}
-      </div>
-
-      <div style={{ marginTop: '1rem', display: 'flex', gap: '1rem' }}>
-        <input
-          type="text"
-          value={input}
-          onChange={(e) => setInput(e.target.value)}
-          onKeyDown={handleKeyPress}
-          disabled={!isInputEnabled}
-          placeholder={isInputEnabled ? "Type your response..." : "Waiting for prompt..."}
-          style={{ flex: 1, padding: '0.5rem', opacity: isInputEnabled ? 1 : 0.5 }}
-        />
-        <button onClick={handleSend} disabled={!isInputEnabled} style={{ padding: '0.5rem 1rem' }}>Send</button>
-      </div>
-    </div>
-  );
+		<div style={{ padding: '2rem', fontFamily: 'monospace' }}>
+			<h1>🃏 Blackjack Game Interface</h1>
+	
+			{!connected && (
+				<button onClick={startGame} style={{ padding: '1rem', marginBottom: '1rem' }}>
+					Start Game
+				</button>
+			)}
+	
+			<div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', marginBottom: '1rem' }}>
+				<div>
+					<h2>Dealer's Hand</h2>
+					<div style={{ display: 'flex' }}>
+						{dealerHand.map((value, idx) => (
+							<Card key={`dealer-${idx}`} value={value} suit={suits[idx % 4]} cardId={`dealer-${idx}`} />
+						))}
+					</div>
+				</div>
+	
+				<div>
+					<h2>Your Hand</h2>
+					<div style={{ display: 'flex' }}>
+					{playerHand.map((value, idx) => (
+						<Card key={`player-${idx}`} value={value} suit={suits[(idx + 2) % 4]} cardId={`player-${idx}`} />
+					))}
+					</div>
+				</div>
+			</div>
+	
+			<div style={{ whiteSpace: 'pre-wrap', background: '#f5f5f5', padding: '1rem', height: '300px', overflowY: 'auto', borderRadius: '8px', border: '1px solid #ccc' }}>
+				{messages.map((msg, idx) => (
+					<div key={idx}>{msg}</div>
+				))}
+			</div>
+	
+			{/* Input section only for room selection */}
+			{expectedInputType === "roomSelect" && (
+				<div style={{ marginTop: '1rem', display: 'flex', gap: '1rem' }}>
+					<input
+						type="text"
+						value={input}
+						onChange={(e) => setInput(e.target.value)}
+						onKeyDown={handleKeyPress}
+						disabled={!isInputEnabled}
+						placeholder="Enter room number (1, 2, or 3)"
+						style={{ flex: 1, padding: '0.5rem', opacity: isInputEnabled ? 1 : 0.5 }}
+					/>
+					<button onClick={handleSend} disabled={!isInputEnabled} style={{ padding: '0.5rem 1rem' }}>Send</button>
+				</div>
+			)}
+	
+			{/* Buttons for Hit or Stand */}
+			{expectedInputType === "hitOrStand" && (
+				<div style={{ marginTop: '1rem', display: 'flex', gap: '1rem' }}>
+					<button onClick={() => handleButtonInput("hit")} style={{ padding: '0.5rem 1rem' }}>Hit</button>
+					<button onClick={() => handleButtonInput("stand")} style={{ padding: '0.5rem 1rem' }}>Stand</button>
+				</div>
+			)}
+	
+			{/* Buttons for Yes or No */}
+			{expectedInputType === "continue" && (
+				<div style={{ marginTop: '1rem', display: 'flex', gap: '1rem' }}>
+					<button onClick={() => handleButtonInput("yes")} style={{ padding: '0.5rem 1rem' }}>Yes</button>
+					<button onClick={() => handleButtonInput("no")} style={{ padding: '0.5rem 1rem' }}>No</button>
+				</div>
+			)}
+		</div>
+	);	
 }
 
 export default App;
