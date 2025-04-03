@@ -1,7 +1,27 @@
 import { useRef, useState } from 'react';
 import Card from './Card';
+import './App.css';
+
 
 const suits = ['♠', '♥', '♦', '♣'];
+
+const calculateTotal = (hand) => {
+  let total = 0;
+  let aceCount = 0;
+
+  for (let value of hand) {
+    if (value === 11) aceCount++;
+    total += value;
+  }
+
+  while (total > 21 && aceCount > 0) {
+    total -= 10;
+    aceCount--;
+  }
+
+  return total;
+};
+
 
 function App() {
   const [messages, setMessages] = useState([]);
@@ -154,44 +174,43 @@ const startGame = () => {
   };
 
   return (
-		<div style={{ padding: '2rem', fontFamily: 'monospace' }}>
+		<div className="app-container">
 			<h1>🃏 Blackjack Game Interface</h1>
-	
+
 			{!connected && (
-				<button onClick={startGame} style={{ padding: '1rem', marginBottom: '1rem' }}>
+				<button onClick={startGame} className="start-button">
 					Start Game
 				</button>
 			)}
-	
-			<div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', marginBottom: '1rem' }}>
+
+			<div className="hand-container">
 				<div>
-					<h2>Dealer's Hand</h2>
-					<div style={{ display: 'flex' }}>
+					<h2>Dealer's Hand (Total: {calculateTotal(dealerHand)})</h2>
+					<div className="cards-row">
 						{dealerHand.map((value, idx) => (
 							<Card key={`dealer-${idx}`} value={value} suit={suits[idx % 4]} cardId={`dealer-${idx}`} />
 						))}
 					</div>
 				</div>
-	
+
 				<div>
-					<h2>Your Hand</h2>
-					<div style={{ display: 'flex' }}>
-					{playerHand.map((value, idx) => (
-						<Card key={`player-${idx}`} value={value} suit={suits[(idx + 2) % 4]} cardId={`player-${idx}`} />
-					))}
+					<h2>Your Hand (Total: {calculateTotal(playerHand)})</h2>
+					<div className="cards-row">
+						{playerHand.map((value, idx) => (
+							<Card key={`player-${idx}`} value={value} suit={suits[(idx + 2) % 4]} cardId={`player-${idx}`} />
+						))}
 					</div>
 				</div>
 			</div>
-	
-			<div style={{ whiteSpace: 'pre-wrap', background: '#f5f5f5', padding: '1rem', height: '300px', overflowY: 'auto', borderRadius: '8px', border: '1px solid #ccc' }}>
+
+			<div className="message-box">
 				{messages.map((msg, idx) => (
 					<div key={idx}>{msg}</div>
 				))}
 			</div>
-	
-			{/* Input section only for room selection */}
+
 			{expectedInputType === "roomSelect" && (
-				<div style={{ marginTop: '1rem', display: 'flex', gap: '1rem' }}>
+				<div className="input-section">
 					<input
 						type="text"
 						value={input}
@@ -199,28 +218,27 @@ const startGame = () => {
 						onKeyDown={handleKeyPress}
 						disabled={!isInputEnabled}
 						placeholder="Enter room number (1, 2, or 3)"
-						style={{ flex: 1, padding: '0.5rem', opacity: isInputEnabled ? 1 : 0.5 }}
+						style={{ opacity: isInputEnabled ? 1 : 0.5 }}
 					/>
-					<button onClick={handleSend} disabled={!isInputEnabled} style={{ padding: '0.5rem 1rem' }}>Send</button>
+					<button onClick={handleSend} disabled={!isInputEnabled}>Send</button>
 				</div>
 			)}
-	
-			{/* Buttons for Hit or Stand */}
+
 			{expectedInputType === "hitOrStand" && (
-				<div style={{ marginTop: '1rem', display: 'flex', gap: '1rem' }}>
-					<button onClick={() => handleButtonInput("hit")} style={{ padding: '0.5rem 1rem' }}>Hit</button>
-					<button onClick={() => handleButtonInput("stand")} style={{ padding: '0.5rem 1rem' }}>Stand</button>
+				<div className="button-group">
+					<button onClick={() => handleButtonInput("hit")}>Hit</button>
+					<button onClick={() => handleButtonInput("stand")}>Stand</button>
 				</div>
 			)}
-	
-			{/* Buttons for Yes or No */}
+
 			{expectedInputType === "continue" && (
-				<div style={{ marginTop: '1rem', display: 'flex', gap: '1rem' }}>
-					<button onClick={() => handleButtonInput("yes")} style={{ padding: '0.5rem 1rem' }}>Yes</button>
-					<button onClick={() => handleButtonInput("no")} style={{ padding: '0.5rem 1rem' }}>No</button>
+				<div className="button-group">
+					<button onClick={() => handleButtonInput("yes")}>Yes</button>
+					<button onClick={() => handleButtonInput("no")}>No</button>
 				</div>
 			)}
 		</div>
+
 	);	
 }
 

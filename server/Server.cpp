@@ -57,10 +57,22 @@ public:
     int calculateHandTotal()
     {
         int total = 0;
+        int aceCount = 0;
+
         for (int card : this->hand)
         {
+            if (card == 11) {
+                aceCount++;
+            }
             total += card;
         }
+
+        while (total > 21 && aceCount > 0)
+        {
+            total -= 10;
+            aceCount--;
+        }
+
         return total;
     }
 };
@@ -281,10 +293,23 @@ public:
     int calculateHandTotal()
     {
         int total = 0;
+        int aceCount = 0;
+
         for (int card : playerHand)
         {
+            if (card == 11) {
+                aceCount++;
+            }
             total += card;
         }
+
+        // Adjust Aces from 11 to 1 if total > 21
+        while (total > 21 && aceCount > 0)
+        {
+            total -= 10; // 11 -> 1
+            aceCount--;
+        }
+
         return total;
     }
 };

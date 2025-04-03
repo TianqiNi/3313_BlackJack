@@ -1,42 +1,56 @@
-#root {
-  max-width: 1280px;
-  margin: 0 auto;
+/* App.css */
+.app-container {
   padding: 2rem;
-  text-align: center;
+  font-family: monospace;
 }
 
-.logo {
-  height: 6em;
-  padding: 1.5em;
-  will-change: filter;
-  transition: filter 300ms;
-}
-.logo:hover {
-  filter: drop-shadow(0 0 2em #646cffaa);
-}
-.logo.react:hover {
-  filter: drop-shadow(0 0 2em #61dafbaa);
+.start-button {
+  padding: 1rem;
+  margin-bottom: 1rem;
 }
 
-@keyframes logo-spin {
-  from {
-    transform: rotate(0deg);
-  }
-  to {
-    transform: rotate(360deg);
-  }
+.hand-container {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  margin-bottom: 1rem;
 }
 
-@media (prefers-reduced-motion: no-preference) {
-  a:nth-of-type(2) .logo {
-    animation: logo-spin infinite 20s linear;
-  }
+.cards-row {
+  display: flex;
 }
 
-.card {
-  padding: 2em;
+.message-box {
+  white-space: pre-wrap;
+  background: #f5f5f5;
+  padding: 1rem;
+  height: 300px;
+  overflow-y: auto;
+  border-radius: 8px;
+  border: 1px solid #ccc;
 }
 
-.read-the-docs {
-  color: #888;
+.input-section {
+  margin-top: 1rem;
+  display: flex;
+  gap: 1rem;
+}
+
+.input-section input {
+  flex: 1;
+  padding: 0.5rem;
+}
+
+.input-section button {
+  padding: 0.5rem 1rem;
+}
+
+.button-group {
+  margin-top: 1rem;
+  display: flex;
+  gap: 1rem;
+}
+
+.button-group button {
+  padding: 0.5rem 1rem;
 }
