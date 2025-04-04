@@ -13,7 +13,7 @@ wss.on('connection', ws => {
 
   ws.on('message', message => {
     const cleaned = message.toString().trim();
-    console.log("Proxy sending to TCP:", cleaned);
+    console.log("[Proxy] WS -> TCP:", cleaned);
     tcpClient.write(cleaned + "\n");
   });
 

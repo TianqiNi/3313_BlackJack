@@ -131,7 +131,7 @@ function App() {
 
   // Triggered by button click
   const startGame = () => {
-    const ws = new WebSocket("ws://localhost:8080");
+    const ws = new WebSocket("ws://34.173.230.74:8080");
     socketRef.current = ws;
 
     ws.onopen = () => {

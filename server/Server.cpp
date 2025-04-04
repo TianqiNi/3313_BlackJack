@@ -61,7 +61,8 @@ public:
 
         for (int card : this->hand)
         {
-            if (card == 11) {
+            if (card == 11)
+            {
                 aceCount++;
             }
             total += card;
@@ -121,24 +122,11 @@ public:
 
     void askHit()
     {
-        std::cout << "[DEBUG] Sending2 hit/stand prompt..." << std::endl;
         socketWrite.Wait();
-        std::cout << "[DEBUG] Sending1 hit/stand prompt..." << std::endl;
+        std::cout << "[DEBUG] Sending hit/stand prompt..." << std::endl;
 
         ByteArray data("Do you want to hit or stand?\n");
         socket.Write(data);
-
-        // ByteArray receivedData;
-        // socket.Read(receivedData);
-        // std::string ack(receivedData.v.begin(), receivedData.v.end());
-        // ack.erase(std::remove(ack.begin(), ack.end(), '\n'), ack.end());
-        // ack.erase(std::remove(ack.begin(), ack.end(), '\r'), ack.end());
-        
-        // std::cout << "[DEBUG] Got ACK: [" << ack << "]\n";
-
-        // if (ack == "ack") {
-        //     socketWrite.Signal(); 
-        // }
 
         // Wait for response
         while (true)
@@ -196,7 +184,8 @@ public:
         std::copy_n(player, playerHandSize, playerHand.begin());
 
         std::string handStr;
-        std::cout << "[DEBUG] Sending hand data:\n" << handStr << std::endl;
+        std::cout << "[DEBUG] Sending hand data:\n"
+                  << handStr << std::endl;
         handStr += "Dealer's hand:\n";
         for (int i = 0; i < dealerHandSize; ++i)
         {
@@ -216,13 +205,14 @@ public:
 
         ByteArray receivedData;
         socket.Read(receivedData);
-        
+
         std::string ack(receivedData.v.begin(), receivedData.v.end());
         ack.erase(std::remove(ack.begin(), ack.end(), '\n'), ack.end());
         ack.erase(std::remove(ack.begin(), ack.end(), '\r'), ack.end());
 
         std::cout << "[DEBUG] readHand ACK: [" << ack << "]\n";
-        if (ack == "ack") {
+        if (ack == "ack")
+        {
             socketWrite.Signal();
         }
     }
@@ -233,7 +223,7 @@ public:
         socket.Write(data);
 
         ByteArray receivedData;
-        socket.Read(receivedData);  // Read whatever comes back
+        socket.Read(receivedData); // Read whatever comes back
         std::string response(receivedData.v.begin(), receivedData.v.end());
 
         // Split into parts
@@ -242,7 +232,8 @@ public:
 
         std::cout << "[DEBUG] Received raw continue response: [" << response << "]\n";
 
-        if (response == "ack") {
+        if (response == "ack")
+        {
             // wait for the next input
             socket.Read(receivedData);
             response = std::string(receivedData.v.begin(), receivedData.v.end());
@@ -255,15 +246,14 @@ public:
         if (response == "yes")
         {
             isContinue = true;
-            socketWrite.Signal();  // ensure we unlock if needed
+            socketWrite.Signal(); // ensure we unlock if needed
         }
         else if (response == "no")
         {
             isContinue = false;
-            socketWrite.Signal();  // ensure we unlock if needed
+            socketWrite.Signal(); // ensure we unlock if needed
         }
     }
-
 
     void sendWinner(std::string message)
     {
@@ -297,7 +287,8 @@ public:
 
         for (int card : playerHand)
         {
-            if (card == 11) {
+            if (card == 11)
+            {
                 aceCount++;
             }
             total += card;
@@ -356,12 +347,16 @@ public:
             sendData += std::to_string(playerHand[i]) + " ";
         }
 
+        std::cout << "[Spectator] Sending hand to spectator:\n"
+                  << sendData << std::endl;
         socketWrite.Wait();
         ByteArray data(sendData);
         socket.Write(data);
+        std::cout << "[Spectator] Waiting for ACK...\n";
         ByteArray receivedData;
         socket.Read(receivedData);
         std::string ack(receivedData.v.begin(), receivedData.v.end());
+        std::cout << "[Spectator] Received ACK: [" << ack << "]\n";
         if (ack == "ack")
         {
             socketWrite.Signal();
@@ -432,6 +427,24 @@ public:
     void addSpec(Spectator *newSpec)
     {
         spectators.push_back(newSpec);
+
+        // Immediately send current game state to this new spectator
+        try
+        {
+            Shared<MyShared> shared("sharedMemory");
+            TableData &table = shared->table[roomId];
+
+            newSpec->send(
+                table.dealerHand,
+                table.playerHand,
+                table.dealerHandSize,
+                table.playerHandSize);
+            std::cout << "[DEBUG] Sent initial state to spectator\n";
+        }
+        catch (...)
+        {
+            std::cerr << "[ERROR] Failed to send initial state to spectator\n";
+        }
     }
 
     // Initializes and shuffles the deck
@@ -551,8 +564,9 @@ public:
                     };
                 }
 
-                if (!roundOver){
-                // dealer begin hit the card
+                if (!roundOver)
+                {
+                    // dealer begin hit the card
                     while (true)
                     {
                         if ((!gamePlayer->getExplode() && gameDealer->calculateHandTotal() < 17))
@@ -724,7 +738,8 @@ int main()
                     initStr.erase(std::remove(initStr.begin(), initStr.end(), '\n'), initStr.end());
                     initStr.erase(std::remove(initStr.begin(), initStr.end(), '\r'), initStr.end());
 
-                    if (initStr != "yes") {
+                    if (initStr != "yes")
+                    {
                         std::cout << "Client did not confirm with yes. Closing connection.\n";
                         newConnection.Close();
                         continue;
