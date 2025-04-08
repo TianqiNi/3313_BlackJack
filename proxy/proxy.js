@@ -1,14 +1,26 @@
 const net = require('net');
 const WebSocket = require('ws');
+const axios = require('axios');
 
 const wss = new WebSocket.Server({ port: 8080 });
 
-wss.on('connection', ws => {
+wss.on('connection', async (ws, req) => {
+  const ip = req.socket.remoteAddress.replace(/^::ffff:/, '');
+  console.log(`[Proxy] New connection from IP: ${ip}`);
+
+  try {
+    const response = await axios.get(`http://ip-api.com/json/${ip}`);
+    const geo = response.data;
+    console.log(`[Proxy] Location: ${geo.city}, ${geo.country} (${geo.lat}, ${geo.lon})`);
+  } catch (err) {
+    console.error("[Proxy] Failed to fetch geo info:", err.message);
+  }
+
   const tcpClient = net.createConnection({ host: 'localhost', port: 8000 });
 
   tcpClient.on('data', data => {
     console.log("[Proxy] TCP -> WS:", data.toString());
-    ws.send(data.toString()); // send to frontend
+    ws.send(data.toString());
   });
 
   ws.on('message', message => {

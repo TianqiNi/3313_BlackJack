@@ -183,6 +183,18 @@ h2 {
   transform: translateY(-2px);
 }
 
+.server-status-message {
+  background-color: #b22222;
+  color: #fff;
+  padding: 1rem 2rem;
+  border-radius: 12px;
+  font-size: 1.4rem;
+  font-weight: bold;
+  text-align: center;
+  box-shadow: 0 0 10px #000;
+  margin-bottom: 2rem;
+}
+
 @media (max-width: 600px) {
   .cards-row {
     flex-wrap: wrap;

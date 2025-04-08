@@ -759,38 +759,12 @@ int main()
                     }
                     else
                     {
-                        std::cout << "Join as a spectator\n";
-                        Spectator *newSpec = new Spectator(newConnection);
-                        newSpec->askRoom();
-
-                        ByteArray response;
-                        if (newConnection.Read(response) <= 0)
-                        {
-                            std::cerr << "Client disconnected before room choice.\n";
-                            delete newSpec;
-                            continue;
-                        }
-
-                        std::string roomSelectionStr(response.v.begin(), response.v.end());
-                        if (roomSelectionStr != "1" && roomSelectionStr != "2" && roomSelectionStr != "3")
-                        {
-                            ByteArray err("Invalid room number. Disconnecting.\n");
-                            newConnection.Write(err);
-                            delete newSpec;
-                            continue;
-                        }
-
-                        int roomIndex = std::stoi(roomSelectionStr) - 1; // Convert to 0-based
-                        if (roomIndex < 0 || roomIndex >= static_cast<int>(gameRooms.size()))
-                        {
-                            ByteArray err("Room index out of range.\n");
-                            newConnection.Write(err);
-                            delete newSpec;
-                            continue;
-                        }
-
-                        newSpec->setRoomId(roomIndex);
-                        gameRooms[roomIndex]->addSpec(newSpec);
+                        std::cout << "All rooms are full. Rejecting connection.\n";
+                        ByteArray fullMessage("All game rooms are full. Please try again later.\n");
+                        newConnection.Write(fullMessage);
+                        ByteArray ack;
+                        newConnection.Close();
+                        continue;
                     }
                 }
             }

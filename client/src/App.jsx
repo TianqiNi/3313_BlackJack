@@ -34,6 +34,8 @@ function App() {
   const socketRef = useRef(null);
   const [connected, setConnected] = useState(false);
   const [revealDealerHand, setRevealDealerHand] = useState(false);
+  const [serverStatusMessage, setServerStatusMessage] = useState("");
+  const normalExitRef = useRef(false);
 
   const appendMessage = (text) => {
     setMessages((prev) => [...prev, text]);
@@ -131,7 +133,10 @@ function App() {
 
   // Triggered by button click
   const startGame = () => {
+    setServerStatusMessage("");
+    normalExitRef.current = false;
     const ws = new WebSocket("ws://34.173.230.74:8080");
+    // const ws = new WebSocket("ws://localhost:8080");
     socketRef.current = ws;
 
     ws.onopen = () => {
@@ -142,6 +147,15 @@ function App() {
       const message = event.data.trim();
       console.log("[Raw msg]:", JSON.stringify(message));
       appendMessage(message);
+      if (
+        message.toLowerCase().includes("rooms are full") ||
+        message.toLowerCase().includes("all game rooms are full")
+      ) {
+        setServerStatusMessage(message);
+        ws.close(); // Close the connection manually after displaying
+        return;
+      }
+
       parseHands(message);
 
       // Reveal dealer hand if the round is over (a winner is announced)
@@ -182,6 +196,7 @@ function App() {
         appendMessage("[Game ended]");
         setGamePrompt("");
         setGameOver(true);
+        normalExitRef.current = true;
         ws.send("ack");
         ws.close();
       } else {
@@ -191,6 +206,11 @@ function App() {
     };
 
     ws.onclose = () => {
+      if (!normalExitRef.current && messages.length === 0 && serverStatusMessage === "") {
+        setServerStatusMessage(
+          "All game rooms are full. Please try again later."
+        );
+      }      
       appendMessage("[Disconnected]");
     };
 
@@ -205,7 +225,7 @@ function App() {
     <div className="screen-wrapper">
       <h1 className="main-title">BLACKJACK</h1>
       <div className="app-container">
-        {gameOver && (
+        {gameOver && !serverStatusMessage && (
           <div className="end-screen">
             <h2>Thanks for playing!</h2>
             <button
@@ -219,13 +239,17 @@ function App() {
 
         {winMessage && <div className="win-message">{winMessage}</div>}
 
+        {serverStatusMessage && (
+          <div className="server-status-message">{serverStatusMessage}</div>
+        )}
+
         {!connected && (
           <button onClick={startGame} className="start-button">
             Start Game
           </button>
         )}
 
-        {connected && !gameOver && (
+        {connected && !gameOver && !serverStatusMessage && (
           <div className="hand-container">
             <div>
               <h2>
